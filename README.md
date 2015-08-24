@@ -9,7 +9,7 @@ Pack all composer dependencies into a single phar file.
 Install via [Packagist](https://packagist.org/packages/mpyw/comphar).
 
 ```ShellSession
-example@localhost:~$ composer global require mpyw/comphar
+example@localhost:~$ composer global require mpyw/comphar:@dev
 ```
 
 If not yet, you must add **`~/.composer/vendor/bin`** to `$PATH`.  

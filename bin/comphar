@@ -19,7 +19,7 @@ if (ini_get('phar.readonly') || ini_get('phar.require_hash')) {
 
 $loader = __DIR__ . '/../../../autoload.php';
 if (!is_file($loader)) {
-    fwrite(STDERR, 'Do not call this script directly.');
+    fwrite(STDERR, 'Do not call this script directly.' . PHP_EOL);
     exit(1);
 }
 require $loader;
