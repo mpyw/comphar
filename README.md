@@ -72,7 +72,7 @@ Nothing to install or update
 Writing lock file
 Generating autoload files
 example@localhost:~/my-new-package$ comphar
-Create vendor.phar from /Users/mpyw/Dropbox/Repository/comphar? [y/n]: y
+Create vendor.phar from ~/my-new-package? [y/n]: y
 example@localhost:~/my-new-package$
 ```
 
