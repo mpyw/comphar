@@ -2,7 +2,9 @@
     "name": "mpyw/comphar",
     "description": "Pack all composer dependencies into a single phar file",
     "type": "project",
+    "version:": "1.0.0",
     "require": {
+        "php": ">=5.4.0",
         "ulrichsg/getopt-php": "2.3.*"
     },
     "license": "MIT",
@@ -12,6 +14,5 @@
             "email": "ryosuke_i_628@yahoo.co.jp"
         }
     ],
-    "minimum-stability": "dev",
     "bin": ["bin/comphar"]
 }

@@ -2,6 +2,10 @@
 <?php
 
 namespace mpyw\comphar;
+use Ulrichsg\Getopt\Getopt;
+use Ulrichsg\Getopt\Option;
+
+call_user_func(function () {
 
 if (PHP_SAPI !== 'cli') {
     header('Content-Type: text/plain; charset=utf-8', true, 500);
@@ -13,9 +17,12 @@ if (ini_get('phar.readonly') || ini_get('phar.require_hash')) {
     exit(1);
 }
 
-require __DIR__ . '/../../../autoload.php';
-use Ulrichsg\Getopt\Getopt;
-use Ulrichsg\Getopt\Option;
+$loader = __DIR__ . '/../../../autoload.php';
+if (!is_file($loader)) {
+    fwrite(STDERR, 'Do not call this script directly.');
+    exit(1);
+}
+require $loader;
 
 $getopt = new GetOpt([
     (new Option('o', 'out', Getopt::REQUIRED_ARGUMENT))
@@ -34,6 +41,7 @@ $getopt = new GetOpt([
     (new Option('h', 'help'))
         ->setDescription('Show help.'),
 ]);
+$getopt->setBanner("Usage: $argv[0] [options]\n");
 
 try {
     $getopt->parse();
@@ -63,3 +71,5 @@ $phar->setStub("<?php
 });
 __HALT_COMPILER(); ?>");
 $phar->buildFromDirectory($dir);
+
+});
