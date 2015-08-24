@@ -5,8 +5,6 @@ namespace mpyw\comphar;
 use Ulrichsg\Getopt\Getopt;
 use Ulrichsg\Getopt\Option;
 
-call_user_func(function () {
-
 if (PHP_SAPI !== 'cli') {
     header('Content-Type: text/plain; charset=utf-8', true, 500);
     echo 'You have to execute via CLI' . PHP_EOL;
@@ -71,5 +69,3 @@ $phar->setStub("<?php
 });
 __HALT_COMPILER(); ?>");
 $phar->buildFromDirectory($dir);
-
-});
