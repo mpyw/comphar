@@ -2,64 +2,109 @@
 <?php
 
 namespace mpyw\comphar;
-use Ulrichsg\Getopt\Getopt;
-use Ulrichsg\Getopt\Option;
 
 if (PHP_SAPI !== 'cli') {
     header('Content-Type: text/plain; charset=utf-8', true, 500);
-    echo 'You have to execute via CLI' . PHP_EOL;
-    exit(1);
-}
-if (ini_get('phar.readonly') || ini_get('phar.require_hash')) {
-    fwrite(STDERR, 'You have to disable "phar.readonly" and "phar.require_hash"' . PHP_EOL);
+    echo 'You have to execute via CLI.' . PHP_EOL;
     exit(1);
 }
 
-$loader = __DIR__ . '/../../../autoload.php';
-if (!is_file($loader)) {
-    fwrite(STDERR, 'Do not call this script directly.' . PHP_EOL);
-    exit(1);
-}
-require $loader;
-
-$getopt = new GetOpt([
-    (new Option('o', 'out', Getopt::REQUIRED_ARGUMENT))
-        ->setDescription('Output archive name. Default value is "vendor.phar".')
-        ->setDefaultValue('vendor.phar'),
-    (new Option('d', 'dir', Getopt::REQUIRED_ARGUMENT))
-        ->setDescription('Project root directory. Default value is current directory.')
-        ->setDefaultValue(getcwd())
-        ->setValidation(function ($path) {
-            return
-                is_file("$path/composer.json") &&
-                is_dir("$path/vendor") &&
-                is_file("$path/vendor/autoload.php")
-            ;
-        }),
-    (new Option('h', 'help'))
-        ->setDescription('Show help.'),
-]);
-$getopt->setBanner("Usage: $argv[0] [options]\n");
-
-try {
-    $getopt->parse();
-    if ($getopt['help'] !== null) {
-        echo $getopt->getHelpText();
-        exit(0);
+function prompt_bool($message) {
+    while (true) {
+        echo "$message [y/n]: ";
+        if (false === $input = fgets(STDIN)) {
+            error('Unexpected EOF.');
+        }
+        $input = strtolower(trim($input));
+        if ($input === 'y') {
+            return true;
+        }
+        if ($input === 'n') {
+            return false;
+        }
     }
-    $out = $getopt['out'];
-    $dir = $getopt['dir'];
-} catch (\UnexpectedValueException $e) {
-    echo "Error: {$e->getMessage()}" . PHP_EOL;
-    echo $getopt->getHelpText();
+}
+function error($message) {
+    fwrite(STDERR, "Error: $message" . PHP_EOL);
+    usage();
     exit(1);
 }
-
-if (file_exists($out)) {
-    unlink($out);
+function usage() {
+    fwrite(STDERR, "Usage: {$_SERVER['argv'][0]} [options]" . PHP_EOL);
+    fwrite(STDERR, "Options:" . PHP_EOL);
+    fwrite(STDERR, "  -o, --out <value>      Output archive name. Default to \"vendor.phar\"." . PHP_EOL);
+    fwrite(STDERR, "  -d, --dir <value>      Project root directory. Default to getcwd()." . PHP_EOL);
+    fwrite(STDERR, "      --yes              Without confirmation." . PHP_EOL);
+    fwrite(STDERR, "  -h, --help             Show help." . PHP_EOL);
 }
 
-$phar = new \Phar($out, 0, basename($out));
+$opts = getopt('o:d:h', array(
+    'out:',
+    'dir:',
+    'help',
+    'yes',
+));
+$outfile = isset($opts['out']) ? $opts['out'] : (isset($opts['o']) ? $opts['o'] : 'vendor.phar');
+$outdir = dirname($outfile);
+$projdir = isset($opts['dir']) ? $opts['dir'] : (isset($opts['d']) ? $opts['d'] : getcwd());
+$help = isset($opts['help']) || isset($opts['h']);
+$yes = isset($opts['yes']);
+
+if (ini_get('phar.readonly') || ini_get('phar.require_hash')) {
+    error('Permission denied: Disable "phar.readonly" and "phar.require_hash"');
+}
+if ($help) {
+    usage();
+    exit(0);
+}
+if (!is_dir($outdir)) {
+    error("No such directory(-o, --out): $outdir");
+}
+if (!is_writable($outdir)) {
+    error("Permission denied(-o, --out): $outdir");
+}
+if (!is_dir($projdir)) {
+    error("No such directory(-d, --dir): $projdir");
+}
+if (!is_readable($projdir) || !is_executable($projdir)) {
+    error("Permission denied(-d, --dir): $projdir");
+}
+if (!is_file("$projdir/composer.json")) {
+    error("No required file: $projdir/composer.json");
+}
+if (!is_readable("$projdir/composer.json")) {
+    error("Permission denied: $projdir/composer.json");
+}
+if (!is_dir("$projdir/vendor")) {
+    fwrite(STDERR, "Error: No required directory: $projdir/vendor" . PHP_EOL);
+    fwrite(STDERR, 'Hint:  Run "composer install" at the project root directory.' . PHP_EOL);
+    exit(1);
+}
+if (!is_readable("$projdir/vendor") || !is_executable("$projdir/vendor")) {
+    error("Permission denied: $projdir/vendor");
+}
+if (!is_file("$projdir/vendor/autoload.php")) {
+    error("No required file: $projdir/vendor/autoload.php");
+}
+if (!is_readable("$projdir/vendor/autoload.php")) {
+    error("Permission denied: $projdir/vendor/autoload.php");
+}
+
+if (!$yes && !prompt_bool("Create $outfile from $projdir?")) {
+    exit(1);
+}
+if (file_exists($outfile)) {
+    if (!$yes && !prompt_bool("$outfile already exists. Delete it?")) {
+        exit(1);
+    }
+    $do = is_link($outfile) || is_file($outfile) ? 'unlink' : 'rmdir';
+    if (@!$do($outfile)) {
+        $error = error_get_last();
+        error($error['message']);
+    }
+}
+
+$phar = new \Phar($outfile, 0, basename($outfile));
 $phar->setStub("<?php
 /*
  * Generated by comphar
@@ -68,4 +113,4 @@ $phar->setStub("<?php
     require 'phar://' . __FILE__ . '/vendor/autoload.php';
 });
 __HALT_COMPILER(); ?>");
-$phar->buildFromDirectory($dir);
+$phar->buildFromDirectory($projdir);

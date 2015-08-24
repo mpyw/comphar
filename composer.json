@@ -2,10 +2,9 @@
     "name": "mpyw/comphar",
     "description": "Pack all composer dependencies into a single phar file",
     "type": "project",
-    "version:": "1.0.2",
+    "version:": "2.0.0",
     "require": {
-        "php": ">=5.4.0",
-        "ulrichsg/getopt-php": "2.3.*"
+        "php": ">=5.3.0"
     },
     "license": "MIT",
     "authors": [
