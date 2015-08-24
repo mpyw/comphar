@@ -10,6 +10,16 @@ Install via [Packagist](https://packagist.org/packages/mpyw/comphar).
 
 ```ShellSession
 example@localhost:~$ composer global require mpyw/comphar:@dev
+Changed current directory to /Users/mpyw/.composer
+./composer.json has been updated
+Loading composer repositories with package information
+Updating dependencies (including require-dev)
+  - Installing mpyw/comphar (dev-master XXXXXXX)
+    Cloning XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+Writing lock file
+Generating autoload files
+example@localhost:~$
 ```
 
 If not yet, you must add **`~/.composer/vendor/bin`** to `$PATH`.  
@@ -23,11 +33,13 @@ export PATH="~/.composer/vendor/bin:$PATH"
 
 ```ShellSession
 example@localhost:~$ comphar -h
-Usage: comphar [options] [operands]
+Usage: ./comphar [options]
 Options:
-  -o, --out <arg>         Output archive name. Default value is "vendor.phar".
-  -d, --dir <arg>         Project root directory. Default value is current directory.
-  -h, --help              Show help.
+  -o, --out <value>      Output archive name. Default to "vendor.phar".
+  -d, --dir <value>      Project root directory. Default to getcwd().
+      --yes              Without confirmation.
+  -h, --help             Show help.
+example@localhost:~$
 ```
 
 ## Example
@@ -44,7 +56,7 @@ Prepare `composer.json`.
     },
     "autoload": {
         "psr-4": {
-            "mpyw\\MyNewLibrary\\": "src/"
+            "mpyw\\MyNewPackage\\": "src/"
         }
     }
 }
@@ -54,12 +66,19 @@ Let's generate to require `vendor.phar`.
 
 ```ShellSession
 example@localhost:~/my-new-package$ composer update
+Loading composer repositories with package information
+Updating dependencies (including require-dev)
+Nothing to install or update
+Writing lock file
+Generating autoload files
 example@localhost:~/my-new-package$ comphar
+Create vendor.phar from /Users/mpyw/Dropbox/Repository/comphar? [y/n]: y
+example@localhost:~/my-new-package$
 ```
 
 ```php
 <?php
 require 'vendor.phar';
-use mpyw\\MyNewLibrary\\Foo;
+use mpyw\\MyNewPackage\\Foo;
 $foo = new Foo('bar');
 ```

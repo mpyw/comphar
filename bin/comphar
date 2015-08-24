@@ -72,9 +72,6 @@ if (!is_readable($projdir) || !is_executable($projdir)) {
 if (!is_file("$projdir/composer.json")) {
     error("No required file: $projdir/composer.json");
 }
-if (!is_readable("$projdir/composer.json")) {
-    error("Permission denied: $projdir/composer.json");
-}
 if (!is_dir("$projdir/vendor")) {
     fwrite(STDERR, "Error: No required directory: $projdir/vendor" . PHP_EOL);
     fwrite(STDERR, 'Hint:  Run "composer install" at the project root directory.' . PHP_EOL);
