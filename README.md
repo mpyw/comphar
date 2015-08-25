@@ -84,6 +84,10 @@ Create vendor.phar from ~/my-new-package? [y/n]: y
 example@localhost:~/my-new-package$
 ```
 
+##### Note
+
+**Even if you have no dependencies**, you have to call `composer install` or `composer update` to adjust your own library to autoloading.
+
 ### 3. Enjoy
 
 You can require `vendor.phar` as well as usual `vendor/autoload.php`.
@@ -97,7 +101,7 @@ require 'vendor.phar';
 $foo = new Foo();
 ```
 
-#### Add your own autoloadings
+#### Add your own autoloading
 
 ```php
 <?php
