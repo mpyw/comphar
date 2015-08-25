@@ -84,7 +84,7 @@ Create vendor.phar from ~/my-new-package? [y/n]: y
 example@localhost:~/my-new-package$
 ```
 
-##### Note
+#### Note
 
 **Even if you have no dependencies**, you have to call `composer install` or `composer update` to adjust your own library to autoloading.
 
