@@ -6,6 +6,8 @@ Pack all composer dependencies into a single phar file.
 
 ## Installation
 
+### 1. Execute composer global installation
+
 Install via [Packagist](https://packagist.org/packages/mpyw/comphar).
 
 ```ShellSession
@@ -21,6 +23,8 @@ Writing lock file
 Generating autoload files
 example@localhost:~$
 ```
+
+### 2. Update `$PATH`
 
 If not yet, you must add **`~/.composer/vendor/bin`** to `$PATH`.  
 Append the following statement to `~/.bashrc`, `~/.zshrc` and so on.
@@ -44,6 +48,8 @@ example@localhost:~$
 
 ## Example
 
+### 1. Prepare your repository
+
 Prepare `composer.json`.
 
 ```json
@@ -62,7 +68,9 @@ Prepare `composer.json`.
 }
 ```
 
-Let's generate to require `vendor.phar`.
+### 2. Generate `vendor.phar`
+
+Let's generate `vendor.phar` in that directory.
 
 ```ShellSession
 example@localhost:~/my-new-package$ composer update
@@ -76,9 +84,27 @@ Create vendor.phar from ~/my-new-package? [y/n]: y
 example@localhost:~/my-new-package$
 ```
 
+### 3. Enjoy
+
+You can require `vendor.phar` as well as usual `vendor/autoload.php`.
+
+#### Simplest usage
+
 ```php
 <?php
+use mpyw\MyNewPackage\Foo;
 require 'vendor.phar';
-use mpyw\\MyNewPackage\\Foo;
-$foo = new Foo('bar');
+$foo = new Foo();
+```
+
+#### Add your own autoloadings
+
+```php
+<?php
+use mpyw\MyNewPackage\Foo;
+use mpyw\MyOtherPackage\Bar;
+$loader = require 'vendor.phar';
+$loader->addPsr4('mpyw\\MyOtherPackage\\', '~/my-other-package/src');
+$foo = new Foo();
+$bar = new Bar();
 ```
