@@ -89,9 +89,6 @@ if ($help) {
 if (!is_dir($outdir)) {
     error("No such directory(-o, --out): $outdir");
 }
-if (!is_writable($outdir)) {
-    error("Invalid permission(-o, --out): $outdir");
-}
 if (false === $realpath = realpath($outdir)) {
     error("Failed to resolve realpath(-o, --out): $outdir");
 }
@@ -100,9 +97,6 @@ $outdir = $realpath;
 /* Validate project directory */
 if (!is_dir($projdir)) {
     error("No such directory(-d, --dir): $projdir");
-}
-if (!is_readable($projdir) || !is_executable($projdir)) {
-    error("Invalid permission(-d, --dir): $projdir");
 }
 if (false === $realpath = realpath($projdir)) {
     error("Failed to resolve realpath(-d, --dir): $projdir");
@@ -113,9 +107,6 @@ $projdir = $realpath;
 $json_path = $projdir . DIRECTORY_SEPARATOR . 'composer.json';
 if (!is_file($json_path)) {
     error("No required file: $json_path");
-}
-if (!is_readable($json_path)) {
-    error("Invalid permission: $json_path");
 }
 if (null === $json = json_decode(file_get_contents($json_path))) {
     error("Broken JSON: $json_path");
@@ -130,11 +121,8 @@ if (!is_dir($vendor_path)) {
     usage();
     exit(1);
 }
-if (!is_readable($vendor_path) || !is_executable($vendor_path)) {
-    error("Invalid permission: $vendor_path");
-}
 if (false === $realpath = realpath($vendor_path)) {
-    error("Failed to resolve realpath(-d, --dir): $vendor_path");
+    error("Failed to resolve realpath: $vendor_path");
 }
 $vendor_path = $realpath;
 
@@ -149,9 +137,6 @@ if ($outfile === null) {
 $loader_path = $vendor_path . DIRECTORY_SEPARATOR . 'autoload.php';
 if (!is_file($loader_path)) {
     error("No required file: $loader_path");
-}
-if (!is_readable($loader_path)) {
-    error("Invalid permission: $loader_path");
 }
 
 /* Confirmation */
