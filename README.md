@@ -39,12 +39,16 @@ export PATH="~/.composer/vendor/bin:$PATH"
 example@localhost:~$ comphar -h
 Usage: ./comphar [options]
 Options:
+  -h, --help             Show help.
+  -c, --compact          Include only autoloaded files and LICENSE.
+  -v, --verbose          Verbose output.
   -o, --out <value>      Output archive name. Default to "vendor.phar".
   -d, --dir <value>      Project root directory. Default to getcwd().
       --yes              Without confirmation.
-  -h, --help             Show help.
 example@localhost:~$
 ```
+
+`-c|--compact` option is recommended. Every repository usually has a lot of extra files. 
 
 ## Example
 
@@ -79,8 +83,15 @@ Updating dependencies (including require-dev)
 Nothing to install or update
 Writing lock file
 Generating autoload files
-example@localhost:~/my-new-package$ comphar
-Create vendor.phar from ~/my-new-package? [y/n]: y
+example@localhost:~/my-new-package$ comphar -cv
+Project directory: ~/my-new-package
+Output filename: ~/my-new-package/vendor.phar
+Continue? [y/n]: y
+Added: ...
+Added: ...
+Added: ...
+Added: ...
+Added: ...
 example@localhost:~/my-new-package$
 ```
 

@@ -2,7 +2,7 @@
     "name": "mpyw/comphar",
     "description": "Pack all composer dependencies into a single phar file",
     "type": "project",
-    "version:": "2.1.0",
+    "version:": "2.2.0",
     "require": {
         "php": ">=5.3.0"
     },

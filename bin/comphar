@@ -3,15 +3,17 @@
 
 namespace mpyw\comphar;
 
+/* Do not execute via Server */
 if (PHP_SAPI !== 'cli') {
     header('Content-Type: text/plain; charset=utf-8', true, 500);
     echo 'You have to execute via CLI.' . PHP_EOL;
     exit(1);
 }
 
+/* Utility functions */
 function prompt_bool($message) {
     while (true) {
-        echo "$message [y/n]: ";
+        fwrite(STDERR, "$message [y/n]: ");
         if (false === $input = fgets(STDIN)) {
             error('Unexpected EOF.');
         }
@@ -32,67 +34,139 @@ function error($message) {
 function usage() {
     fwrite(STDERR, "Usage: {$_SERVER['argv'][0]} [options]" . PHP_EOL);
     fwrite(STDERR, "Options:" . PHP_EOL);
+    fwrite(STDERR, "  -h, --help             Show help." . PHP_EOL);
+    fwrite(STDERR, "  -c, --compact          Include only autoloaded files and LICENSE." . PHP_EOL);
+    fwrite(STDERR, "  -v, --verbose          Verbose output." . PHP_EOL);
     fwrite(STDERR, "  -o, --out <value>      Output archive name. Default to \"vendor.phar\"." . PHP_EOL);
     fwrite(STDERR, "  -d, --dir <value>      Project root directory. Default to getcwd()." . PHP_EOL);
     fwrite(STDERR, "      --yes              Without confirmation." . PHP_EOL);
-    fwrite(STDERR, "  -h, --help             Show help." . PHP_EOL);
+}
+function scandir($path) {
+    $files = array();
+    $dir = opendir($path);
+    while (false !== $entry = readdir($dir)) {
+        if ($entry !== '.' && $entry !== '..') {
+            $files[] = $path . DIRECTORY_SEPARATOR . $entry;
+        }
+    }
+    closedir($dir);
+    return $files;
+}
+function recurse($path) {
+    $flags = \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_PATHNAME;
+    return new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, $flags));
 }
 
-$opts = getopt('o:d:h', array(
+/* Parse options */
+$opts = getopt('hcvo:d:', array(
+    'help',
+    'compact',
+    'verbose',
     'out:',
     'dir:',
-    'help',
     'yes',
 ));
-$outfile = isset($opts['out']) ? $opts['out'] : (isset($opts['o']) ? $opts['o'] : 'vendor.phar');
-$outdir = dirname($outfile);
+$outfile = isset($opts['out']) ? $opts['out'] : (isset($opts['o']) ? $opts['o'] : null);
+$outdir = $outfile === null ? '.' : dirname($outfile);
 $projdir = isset($opts['dir']) ? $opts['dir'] : (isset($opts['d']) ? $opts['d'] : getcwd());
 $help = isset($opts['help']) || isset($opts['h']);
+$compact = isset($opts['compact']) || isset($opts['c']);
+$verbose = isset($opts['verbose']) || isset($opts['v']);
 $yes = isset($opts['yes']);
 
+/* Validate phar settings */
 if (ini_get('phar.readonly') || ini_get('phar.require_hash')) {
     error('Permission denied: Disable "phar.readonly" and "phar.require_hash"');
 }
+
+/* Check help option */
 if ($help) {
     usage();
     exit(0);
 }
+
+/* Validate output directory */
 if (!is_dir($outdir)) {
     error("No such directory(-o, --out): $outdir");
 }
 if (!is_writable($outdir)) {
-    error("Permission denied(-o, --out): $outdir");
+    error("Invalid permission(-o, --out): $outdir");
 }
+if (false === $realpath = realpath($outdir)) {
+    error("Failed to resolve realpath(-o, --out): $outdir");
+}
+$outdir = $realpath;
+
+/* Validate project directory */
 if (!is_dir($projdir)) {
     error("No such directory(-d, --dir): $projdir");
 }
 if (!is_readable($projdir) || !is_executable($projdir)) {
-    error("Permission denied(-d, --dir): $projdir");
+    error("Invalid permission(-d, --dir): $projdir");
 }
-if (!is_file("$projdir/composer.json")) {
-    error("No required file: $projdir/composer.json");
+if (false === $realpath = realpath($projdir)) {
+    error("Failed to resolve realpath(-d, --dir): $projdir");
 }
-if (!is_dir("$projdir/vendor")) {
-    fwrite(STDERR, "Error: No required directory: $projdir/vendor" . PHP_EOL);
+$projdir = $realpath;
+
+/* Validate composer.json */
+$json_path = $projdir . DIRECTORY_SEPARATOR . 'composer.json';
+if (!is_file($json_path)) {
+    error("No required file: $json_path");
+}
+if (!is_readable($json_path)) {
+    error("Invalid permission: $json_path");
+}
+if (null === $json = json_decode(file_get_contents($json_path))) {
+    error("Broken JSON: $json_path");
+}
+
+/* Validate vendor-dir */
+$vendor = isset($json->config->{'vendor-dir'}) ? $json->config->{'vendor-dir'} : 'vendor';
+$vendor_path = $projdir . DIRECTORY_SEPARATOR . $vendor;
+if (!is_dir($vendor_path)) {
+    fwrite(STDERR, "Error: No required directory: $vendor_path" . PHP_EOL);
     fwrite(STDERR, 'Hint:  Run "composer install" at the project root directory.' . PHP_EOL);
     usage();
     exit(1);
 }
-if (!is_readable("$projdir/vendor") || !is_executable("$projdir/vendor")) {
-    error("Permission denied: $projdir/vendor");
+if (!is_readable($vendor_path) || !is_executable($vendor_path)) {
+    error("Invalid permission: $vendor_path");
 }
-if (!is_file("$projdir/vendor/autoload.php")) {
-    error("No required file: $projdir/vendor/autoload.php");
+if (false === $realpath = realpath($vendor_path)) {
+    error("Failed to resolve realpath(-d, --dir): $vendor_path");
 }
-if (!is_readable("$projdir/vendor/autoload.php")) {
-    error("Permission denied: $projdir/vendor/autoload.php");
+$vendor_path = $realpath;
+
+/* Apply vendor-dir basename as archive name */
+if ($outfile === null) {
+    $outfile = $outdir . DIRECTORY_SEPARATOR . basename($vendor_path) . '.phar';
+} else {
+    $outfile = $outdir . DIRECTORY_SEPARATOR . basename($outfile);
 }
 
-if (!$yes && !prompt_bool("Create $outfile from $projdir?")) {
+/* Validate autoloader */
+$loader_path = $vendor_path . DIRECTORY_SEPARATOR . 'autoload.php';
+if (!is_file($loader_path)) {
+    error("No required file: $loader_path");
+}
+if (!is_readable($loader_path)) {
+    error("Invalid permission: $loader_path");
+}
+
+/* Confirmation */
+if (!$yes && !prompt_bool(
+    'Project directory: ' . $projdir . '' . PHP_EOL .
+    'Output filename: ' . $outfile . PHP_EOL .
+    'Continue?'
+)) {
     exit(1);
 }
 if (file_exists($outfile)) {
-    if (!$yes && !prompt_bool("$outfile already exists. Delete it?")) {
+    if (!$yes && !prompt_bool(
+        'Already exists: ' . $outfile . PHP_EOL .
+        'Remove it?'
+    )) {
         exit(1);
     }
     $do = is_link($outfile) || is_file($outfile) ? 'unlink' : 'rmdir';
@@ -102,11 +176,74 @@ if (file_exists($outfile)) {
     }
 }
 
+/* Create phar archive */
 $phar = new \Phar($outfile, 0, basename($outfile));
+$loader_escaped = addcslashes(substr($loader_path, strlen($projdir)), "\\'");
 $phar->setStub("<?php
 /*
  * Generated by comphar
+ *
+ * https://github.com/mpyw/comphar
  */
-return require 'phar://' . __FILE__ . '/vendor/autoload.php';
+return require 'phar://' . __FILE__ . '$loader_escaped';
 __HALT_COMPILER(); ?>");
-$phar->buildFromDirectory($projdir);
+
+if (!$compact) {
+
+    /* If -c|-compact is unavailable, the solution is very simple. */
+    if (!$verbose) {
+        $phar->buildFromDirectory($projdir);
+    } else {
+        foreach (recurse($projdir) as $entry) {
+            $phar->addFile($entry, substr($entry, strlen($projdir)));
+            fwrite(STDERR, "Added: $entry" . PHP_EOL);
+        }
+    }
+
+} else {
+
+    /* If -c|-compact is available, we need some compicated steps */
+    $phar->addFile($loader_path, substr($loader_path, strlen($projdir)));
+    if ($verbose) {
+        fwrite(STDERR, "Added: $loader_path" . PHP_EOL);
+    }
+    foreach (glob($vendor_path . DIRECTORY_SEPARATOR . 'composer' . DIRECTORY_SEPARATOR . '*.php') as $path) {
+        $phar->addFile($path, substr($path, strlen($projdir)));
+        if ($verbose) {
+            fwrite(STDERR, "Added: $path" . PHP_EOL);
+        }
+    }
+    $stack = array($projdir, $vendor_path);
+    while ($path = array_shift($stack)) {
+        $entries = scandir($path);
+        if (!$grepped = preg_grep('@(?:\A|' . DIRECTORY_SEPARATOR . ')composer.json\z@', $entries)) {
+            $stack = array_merge(array_filter($entries, 'is_dir'), $stack);
+        } else {
+            $json = json_decode(file_get_contents(current($grepped)));
+            if (!empty($json->autoload)) {
+                foreach ($json->autoload as $defs) {
+                    foreach ($defs as $def) {
+                        if (false === $realpath = realpath($path . DIRECTORY_SEPARATOR . $def)) {
+                            continue;
+                        }
+                        foreach (is_dir($realpath) ? recurse($realpath) : array($realpath) as $entry) {
+                            if (!preg_match('/\.php\z/', $entry)) {
+                                continue;
+                            }
+                            $phar->addFile($entry, substr($entry, strlen($projdir)));
+                            if ($verbose) {
+                                fwrite(STDERR, "Added: $entry" . PHP_EOL);
+                            }
+                        }
+                    }
+                }
+            }
+            foreach (glob($path . DIRECTORY_SEPARATOR . '{LICENSE,LICENSE.*}', GLOB_BRACE) as $entry) {
+                $phar->addFile($entry, substr($entry, strlen($projdir)));
+                if ($verbose) {
+                    fwrite(STDERR, "Added: $entry" . PHP_EOL);
+                }
+            }
+        }
+    }
+}
