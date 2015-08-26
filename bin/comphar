@@ -201,7 +201,7 @@ if (!$compact) {
     $stack = array($projdir, $vendor_path);
     while ($path = array_shift($stack)) {
         $entries = scandir($path);
-        if (!$grepped = preg_grep('@(?:\A|' . DIRECTORY_SEPARATOR . ')composer.json\z@', $entries)) {
+        if (!$grepped = preg_grep('@(?:\A|' . addcslashes(DIRECTORY_SEPARATOR, '\\') . ')composer.json\z@', $entries)) {
             $stack = array_merge(array_filter($entries, 'is_dir'), $stack);
         } else {
             $json = json_decode(file_get_contents(current($grepped)));
