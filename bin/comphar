@@ -1,17 +1,18 @@
 #!/usr/bin/env php
 <?php
 
-namespace mpyw\comphar;
+namespace mpyw\Comphar;
 
 /* Do not execute via Server */
 if (PHP_SAPI !== 'cli') {
     header('Content-Type: text/plain; charset=utf-8', true, 500);
-    echo 'You have to execute via CLI.' . PHP_EOL;
+    echo 'You have to execute via php-cli.' . PHP_EOL;
     exit(1);
 }
 
 /* Utility functions */
-function prompt_bool($message) {
+function prompt_bool($message)
+{
     while (true) {
         fwrite(STDERR, "$message [y/n]: ");
         if (false === $input = fgets(STDIN)) {
@@ -26,22 +27,24 @@ function prompt_bool($message) {
         }
     }
 }
-function error($message) {
+function error($message)
+{
     fwrite(STDERR, "Error: $message" . PHP_EOL);
     usage();
     exit(1);
 }
-function usage() {
+function usage()
+{
     fwrite(STDERR, "Usage: {$_SERVER['argv'][0]} [options]" . PHP_EOL);
     fwrite(STDERR, "Options:" . PHP_EOL);
     fwrite(STDERR, "  -h, --help             Show help." . PHP_EOL);
-    fwrite(STDERR, "  -c, --compact          Include only autoloaded files and LICENSE." . PHP_EOL);
     fwrite(STDERR, "  -v, --verbose          Verbose output." . PHP_EOL);
     fwrite(STDERR, "  -o, --out <value>      Output archive name. Default to \"vendor.phar\"." . PHP_EOL);
     fwrite(STDERR, "  -d, --dir <value>      Project root directory. Default to getcwd()." . PHP_EOL);
     fwrite(STDERR, "      --yes              Without confirmation." . PHP_EOL);
 }
-function scandir($path) {
+function scandir($path)
+{
     $files = array();
     $dir = opendir($path);
     while (false !== $entry = readdir($dir)) {
@@ -52,15 +55,15 @@ function scandir($path) {
     closedir($dir);
     return $files;
 }
-function recurse($path) {
+function recurse($path)
+{
     $flags = \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_PATHNAME;
     return new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, $flags));
 }
 
 /* Parse options */
-$opts = getopt('hcvo:d:', array(
+$opts = getopt('hvo:d:', array(
     'help',
-    'compact',
     'verbose',
     'out:',
     'dir:',
@@ -70,7 +73,6 @@ $outfile = isset($opts['out']) ? $opts['out'] : (isset($opts['o']) ? $opts['o'] 
 $outdir = $outfile === null ? '.' : dirname($outfile);
 $projdir = isset($opts['dir']) ? $opts['dir'] : (isset($opts['d']) ? $opts['d'] : getcwd());
 $help = isset($opts['help']) || isset($opts['h']);
-$compact = isset($opts['compact']) || isset($opts['c']);
 $verbose = isset($opts['verbose']) || isset($opts['v']);
 $yes = isset($opts['yes']);
 
@@ -173,62 +175,11 @@ $phar->setStub("<?php
 return require 'phar://' . __FILE__ . '$loader_escaped';
 __HALT_COMPILER(); ?>");
 
-if (!$compact) {
-
-    /* If -c|-compact is unavailable, the solution is very simple. */
-    if (!$verbose) {
-        $phar->buildFromDirectory($projdir);
-    } else {
-        foreach (recurse($projdir) as $entry) {
-            $phar->addFile($entry, substr($entry, strlen($projdir)));
-            fwrite(STDERR, "Added: $entry" . PHP_EOL);
-        }
-    }
-
+if (!$verbose) {
+    $phar->buildFromDirectory($projdir);
 } else {
-
-    /* If -c|-compact is available, we need some compicated steps */
-    $phar->addFile($loader_path, substr($loader_path, strlen($projdir)));
-    if ($verbose) {
-        fwrite(STDERR, "Added: $loader_path" . PHP_EOL);
-    }
-    foreach (glob($vendor_path . DIRECTORY_SEPARATOR . 'composer' . DIRECTORY_SEPARATOR . '*.php') as $path) {
-        $phar->addFile($path, substr($path, strlen($projdir)));
-        if ($verbose) {
-            fwrite(STDERR, "Added: $path" . PHP_EOL);
-        }
-    }
-    $stack = array($projdir, $vendor_path);
-    while ($path = array_shift($stack)) {
-        $entries = scandir($path);
-        if (!$grepped = preg_grep('@(?:\A|' . addcslashes(DIRECTORY_SEPARATOR, '\\') . ')composer.json\z@', $entries)) {
-            $stack = array_merge(array_filter($entries, 'is_dir'), $stack);
-        } else {
-            $json = json_decode(file_get_contents(current($grepped)));
-            if (!empty($json->autoload)) {
-                foreach ($json->autoload as $defs) {
-                    foreach ($defs as $def) {
-                        if (false === $realpath = realpath($path . DIRECTORY_SEPARATOR . $def)) {
-                            continue;
-                        }
-                        foreach (is_dir($realpath) ? recurse($realpath) : array($realpath) as $entry) {
-                            if (!preg_match('/\.php\z/', $entry)) {
-                                continue;
-                            }
-                            $phar->addFile($entry, substr($entry, strlen($projdir)));
-                            if ($verbose) {
-                                fwrite(STDERR, "Added: $entry" . PHP_EOL);
-                            }
-                        }
-                    }
-                }
-            }
-            foreach (glob($path . DIRECTORY_SEPARATOR . '{LICENSE,LICENSE.*}', GLOB_BRACE) as $entry) {
-                $phar->addFile($entry, substr($entry, strlen($projdir)));
-                if ($verbose) {
-                    fwrite(STDERR, "Added: $entry" . PHP_EOL);
-                }
-            }
-        }
+    foreach (recurse($projdir) as $entry) {
+        $phar->addFile($entry, substr($entry, strlen($projdir)));
+        fwrite(STDERR, "Added: $entry" . PHP_EOL);
     }
 }
