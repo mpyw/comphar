@@ -105,7 +105,7 @@ You can require `vendor.phar` as well as usual `vendor/autoload.php`.
 ```php
 <?php
 use mpyw\MyNewPackage\Foo;
-require 'vendor.phar';
+require __DIR__ . '/vendor.phar';
 $foo = new Foo();
 ```
 
@@ -115,7 +115,7 @@ $foo = new Foo();
 <?php
 use mpyw\MyNewPackage\Foo;
 use mpyw\MyOtherPackage\Bar;
-$loader = require 'vendor.phar';
+$loader = require __DIR__ . '/vendor.phar';
 $loader->addPsr4('mpyw\\MyOtherPackage\\', '~/my-other-package/src');
 $foo = new Foo();
 $bar = new Bar();
