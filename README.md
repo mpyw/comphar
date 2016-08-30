@@ -11,7 +11,7 @@ Pack all composer dependencies into a single phar file.
 Install via [Packagist](https://packagist.org/packages/mpyw/comphar).
 
 ```ShellSession
-example@localhost:~$ composer global require mpyw/comphar:@dev
+example@localhost:~$ composer global require mpyw/comphar:^1.0
 Changed current directory to /Users/mpyw/.composer
 ./composer.json has been updated
 Loading composer repositories with package information
