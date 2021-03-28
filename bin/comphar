@@ -1,4 +1,4 @@
-#!/usr/bin/env php
+#!/usr/bin/env php -d phar.readonly=0 phar.require_hash=0
 <?php
 
 namespace mpyw\Comphar;
