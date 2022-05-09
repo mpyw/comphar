@@ -120,3 +120,23 @@ $loader->addPsr4('mpyw\\MyOtherPackage\\', '~/my-other-package/src');
 $foo = new Foo();
 $bar = new Bar();
 ```
+
+### Error: Permission denied
+
+It's possible you run into the error "Permission denied":
+
+```ShellSession
+example@localhost:~/my-new-package$ comphar -v
+Error: Permission denied: Disable "phar.readonly" and "phar.require_hash"
+```
+
+In this case, you need to adjust your configuration at the "php.ini":
+
+```
+[Phar]
+; http://php.net/phar.readonly
+phar.readonly = Off
+
+; http://php.net/phar.require-hash
+phar.require_hash = Off
+```
